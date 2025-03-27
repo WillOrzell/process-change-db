@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProcessChange } from '@/lib/db/process-changes';
 import ProcessChangeForm from '@/components/ProcessChangeForm';
-// @ts-ignore
-import { useUser } from '@clerk/nextjs';
-import { getUserByClerkId, hasRole, UserData } from '@/lib/auth';
+// Use our local auth instead of Clerk
+import { useAuth, hasRole } from '@/lib/local-auth';
+import { UserData } from '@/lib/auth';
 import { parseAttachments } from '@/lib/uploads';
 
 interface ChangeDetailPageProps {
@@ -16,7 +16,7 @@ interface ChangeDetailPageProps {
 export default function ChangeDetailPage({ params }: ChangeDetailPageProps) {
   const { id } = params;
   const router = useRouter();
-  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
+  const { user: currentUser, isLoaded, isSignedIn } = useAuth();
   
   const [change, setChange] = useState<ProcessChange | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
@@ -39,10 +39,9 @@ export default function ChangeDetailPage({ params }: ChangeDetailPageProps) {
         const data = await response.json();
         setChange(data);
         
-        // If user is loaded, fetch user data
-        if (isSignedIn && clerkUser) {
-          const userData = await getUserByClerkId(clerkUser.id);
-          setUser(userData);
+        // Use the current user from local auth
+        if (isSignedIn && currentUser) {
+          setUser(currentUser);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -55,7 +54,7 @@ export default function ChangeDetailPage({ params }: ChangeDetailPageProps) {
     if (isLoaded) {
       fetchData();
     }
-  }, [id, isLoaded, isSignedIn, clerkUser]);
+  }, [id, isLoaded, isSignedIn, currentUser]);
   
   // Check if the user is the owner of this change
   const isOwner = user && change ? change.changeOwner === user.id : false;

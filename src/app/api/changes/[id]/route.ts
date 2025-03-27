@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { 
   getProcessChangeById, 
   updateProcessChange, 
-  deleteProcessChange,
-  ProcessStatus 
-} from '@/lib/db/process-changes';
-// @ts-ignore
-import { currentUser } from '@clerk/nextjs';
-import { getUserByClerkId, hasRole } from '@/lib/auth';
+  deleteProcessChange
+} from '@/lib/db/mock-data'; // Use mock data instead of SQLite
+import { ProcessStatus } from '@/lib/db/process-changes';
+import { getCurrentUser, hasRole } from '@/lib/local-auth'; // Use local auth
 
-// GET /api/changes/:id - Get a single process change
+// GET handler to fetch a specific process change
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -17,6 +15,7 @@ export async function GET(
   try {
     const id = parseInt(params.id);
     
+    // Check if ID is a valid number
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
@@ -24,16 +23,19 @@ export async function GET(
       );
     }
     
-    const change = getProcessChangeById(id);
+    // Get the process change
+    const processChange = getProcessChangeById(id);
     
-    if (!change) {
+    // Check if process change exists
+    if (!processChange) {
       return NextResponse.json(
         { error: 'Process change not found' },
         { status: 404 }
       );
     }
     
-    return NextResponse.json(change);
+    // Return the process change
+    return NextResponse.json(processChange);
   } catch (error) {
     console.error('Error fetching process change:', error);
     return NextResponse.json(
@@ -43,30 +45,24 @@ export async function GET(
   }
 }
 
-// PATCH /api/changes/:id - Update a process change
+// PATCH handler to update a process change
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get current user and check permissions
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
+    // Check if user is authenticated
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
     
-    const user = await getUserByClerkId(clerkUser.id);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found in database' },
-        { status: 404 }
-      );
-    }
-    
     const id = parseInt(params.id);
+    
+    // Check if ID is a valid number
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
@@ -74,33 +70,30 @@ export async function PATCH(
       );
     }
     
-    // Get existing change to check ownership
-    const existingChange = getProcessChangeById(id);
-    if (!existingChange) {
+    // Get the existing process change
+    const processChange = getProcessChangeById(id);
+    
+    // Check if process change exists
+    if (!processChange) {
       return NextResponse.json(
         { error: 'Process change not found' },
         { status: 404 }
       );
     }
     
-    // Check if user is allowed to update this change
-    const isOwner = existingChange.changeOwner === user.id;
-    const isAdmin = hasRole(user.role, 'ADMIN');
-    const isSupervisor = hasRole(user.role, 'SUPERVISOR');
+    // Parse request body
+    const updateData = await request.json();
     
-    // Only owner or admin can edit details, supervisor can only update status
-    let updateData = await request.json();
+    // Check if user is owner of change or admin
+    const isOwner = processChange.changeOwner === currentUser.id;
+    const isAdmin = currentUser.role === 'ADMIN';
     
     if (!isOwner && !isAdmin) {
-      // If not owner or admin, supervisor can only update status
-      if (isSupervisor) {
-        // Filter out all fields except status and generalComments
-        updateData = {
-          status: updateData.status,
-          generalComments: updateData.generalComments,
-          acceptanceDate: updateData.status === 'ACCEPTED' ? new Date().toISOString() : existingChange.acceptanceDate
-        };
-      } else {
+      // Check if user is supervisor trying to update status only
+      const isSupervisor = currentUser.role === 'SUPERVISOR';
+      const isStatusUpdate = Object.keys(updateData).length === 1 && updateData.status;
+      
+      if (!(isSupervisor && isStatusUpdate)) {
         return NextResponse.json(
           { error: 'You do not have permission to update this process change' },
           { status: 403 }
@@ -108,39 +101,42 @@ export async function PATCH(
       }
     }
     
-    // Validate status transitions based on user role
-    if (updateData.status && updateData.status !== existingChange.status) {
-      if (isOwner && !isAdmin && !isSupervisor) {
-        // Engineer can only transition from OPEN to SUBMITTED
-        if (!(existingChange.status === 'OPEN' && updateData.status === 'SUBMITTED')) {
+    // Handle status transitions
+    if (updateData.status && updateData.status !== processChange.status) {
+      // Check if this is a valid status transition based on role
+      if (currentUser.role === 'ENGINEER' && !isOwner) {
+        return NextResponse.json(
+          { error: 'Only the owner of the change can update its status' },
+          { status: 403 }
+        );
+      }
+      
+      // Engineers can only propose or submit
+      if (currentUser.role === 'ENGINEER' && 
+          !['PROPOSED', 'SUBMITTED'].includes(updateData.status)) {
+        return NextResponse.json(
+          { error: 'Engineers can only set status to PROPOSED or SUBMITTED' },
+          { status: 403 }
+        );
+      }
+      
+      // Supervisors can approve or reject submitted changes
+      if (currentUser.role === 'SUPERVISOR' && 
+          updateData.status !== processChange.status) {
+        if (processChange.status !== 'SUBMITTED' && 
+            ['ACCEPTED', 'REJECTED'].includes(updateData.status)) {
           return NextResponse.json(
-            { error: 'Invalid status transition for Engineer' },
-            { status: 400 }
-          );
-        }
-      } else if (isSupervisor) {
-        // Supervisor can transition from PROPOSED to OPEN, or from SUBMITTED to ACCEPTED/REJECTED
-        const validTransitions: Record<ProcessStatus, ProcessStatus[]> = {
-          'PROPOSED': ['OPEN'],
-          'OPEN': [],
-          'SUBMITTED': ['ACCEPTED', 'REJECTED'],
-          'ACCEPTED': [],
-          'REJECTED': []
-        };
-        
-        if (!validTransitions[existingChange.status]?.includes(updateData.status)) {
-          return NextResponse.json(
-            { error: 'Invalid status transition for Supervisor' },
+            { error: 'Changes must be SUBMITTED before they can be ACCEPTED or REJECTED' },
             { status: 400 }
           );
         }
       }
-      // Admin can do any transition
     }
     
     // Update the process change
     const updatedChange = updateProcessChange(id, updateData);
     
+    // Return the updated process change
     return NextResponse.json(updatedChange);
   } catch (error) {
     console.error('Error updating process change:', error);
@@ -151,30 +147,24 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/changes/:id - Delete a process change
+// DELETE handler to delete a process change
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get current user and check permissions
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
+    // Check if user is authenticated
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
     
-    const user = await getUserByClerkId(clerkUser.id);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found in database' },
-        { status: 404 }
-      );
-    }
-    
     const id = parseInt(params.id);
+    
+    // Check if ID is a valid number
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid ID format' },
@@ -182,18 +172,20 @@ export async function DELETE(
       );
     }
     
-    // Get existing change to check ownership
-    const existingChange = getProcessChangeById(id);
-    if (!existingChange) {
+    // Get the existing process change
+    const processChange = getProcessChangeById(id);
+    
+    // Check if process change exists
+    if (!processChange) {
       return NextResponse.json(
         { error: 'Process change not found' },
         { status: 404 }
       );
     }
     
-    // Only owner or admin can delete a change
-    const isOwner = existingChange.changeOwner === user.id;
-    const isAdmin = hasRole(user.role, 'ADMIN');
+    // Check if user is owner of change or admin
+    const isOwner = processChange.changeOwner === currentUser.id;
+    const isAdmin = currentUser.role === 'ADMIN';
     
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
@@ -212,6 +204,7 @@ export async function DELETE(
       );
     }
     
+    // Return success
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting process change:', error);

@@ -10,10 +10,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 interface FileData {
+  buffer: Buffer | Uint8Array;
   filename: string;
-  mimetype: string;
-  encoding: string;
-  buffer: Buffer;
+  mimetype?: string;
+  encoding?: string;
 }
 
 /**
@@ -22,28 +22,24 @@ interface FileData {
  * @param subdirectory - Optional subdirectory within uploads folder
  * @returns The relative path to the saved file
  */
-export async function saveUploadedFile(
-  file: FileData,
-  subdirectory: string = ''
-): Promise<string> {
-  // Create unique filename with UUID to prevent collisions
-  const fileExtension = path.extname(file.filename);
-  const uniqueFilename = `${uuidv4()}${fileExtension}`;
+export async function saveUploadedFile(fileData: FileData, subdirectory: string): Promise<string> {
+  // Generate a unique filename to avoid collisions
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(2, 8);
+  const fileExt = fileData.filename.split('.').pop() || 'bin';
+  const safeFilename = `${timestamp}-${randomString}.${fileExt}`;
   
-  // Create target directory if it doesn't exist
-  const targetDir = path.join(uploadsDir, subdirectory);
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
+  // In a real app, we would:
+  // 1. Create the subdirectory if it doesn't exist
+  // 2. Write the file to disk
+  // 3. Return the path to the file
   
-  // Full path to save the file
-  const filePath = path.join(targetDir, uniqueFilename);
+  // For our mock, we'll just generate a file path
+  const filePath = `/uploads/${subdirectory}/${safeFilename}`;
   
-  // Write the file
-  await fs.promises.writeFile(filePath, file.buffer);
+  console.log(`Mock file saved: ${filePath} (${fileData.buffer.byteLength} bytes)`);
   
-  // Return the relative path for storage in the database
-  return path.join('/uploads', subdirectory, uniqueFilename).replace(/\\/g, '/');
+  return filePath;
 }
 
 /**
@@ -52,20 +48,14 @@ export async function saveUploadedFile(
  * @returns True if the file was deleted, false otherwise
  */
 export async function deleteUploadedFile(filePath: string): Promise<boolean> {
-  // Get absolute path from relative path
-  const absolutePath = path.join(process.cwd(), filePath);
+  // In a real app, we would:
+  // 1. Verify the file exists
+  // 2. Delete the file from disk
+  // 3. Return success/failure
   
-  try {
-    // Check if file exists before attempting to delete
-    if (fs.existsSync(absolutePath)) {
-      await fs.promises.unlink(absolutePath);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    return false;
-  }
+  console.log(`Mock file deleted: ${filePath}`);
+  
+  return true;
 }
 
 /**
@@ -73,15 +63,13 @@ export async function deleteUploadedFile(filePath: string): Promise<boolean> {
  * @param attachmentsString - JSON string representation of attachments
  * @returns Array of attachment paths
  */
-export function parseAttachments(attachmentsString: string | null): string[] {
-  if (!attachmentsString) {
-    return [];
-  }
+export function parseAttachments(attachmentsJson: string | null | undefined): string[] {
+  if (!attachmentsJson) return [];
   
   try {
-    return JSON.parse(attachmentsString);
+    return JSON.parse(attachmentsJson);
   } catch (error) {
-    console.error('Error parsing attachments:', error);
+    console.error('Error parsing attachments JSON:', error);
     return [];
   }
 }

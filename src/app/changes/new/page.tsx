@@ -3,40 +3,30 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProcessChangeForm from '@/components/ProcessChangeForm';
-// @ts-ignore
-import { useUser } from '@clerk/nextjs';
-import { getUserByClerkId, UserData } from '@/lib/auth';
+// Use our local auth instead of Clerk
+import { useAuth } from '@/lib/local-auth';
+import { UserData } from '@/lib/auth';
 
 export default function NewProcessChangePage() {
   const router = useRouter();
-  const { user: clerkUser, isLoaded, isSignedIn } = useUser();
+  const { user: currentUser, isLoaded, isSignedIn } = useAuth();
   
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Fetch user data
+  // Set user from local auth
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        setLoading(true);
-        
-        if (isSignedIn && clerkUser) {
-          const userData = await getUserByClerkId(clerkUser.id);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setError('Failed to load user data');
-      } finally {
-        setLoading(false);
+    if (isLoaded) {
+      setLoading(false);
+      
+      if (isSignedIn && currentUser) {
+        setUser(currentUser);
+      } else {
+        setError('User not found. Please sign in.');
       }
     }
-    
-    if (isLoaded) {
-      fetchUser();
-    }
-  }, [isLoaded, isSignedIn, clerkUser]);
+  }, [isLoaded, isSignedIn, currentUser]);
   
   if (loading) {
     return (
