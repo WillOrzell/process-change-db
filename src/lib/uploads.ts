@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+// @ts-ignore
 import { v4 as uuidv4 } from 'uuid';
 
 // Ensure uploads directory exists

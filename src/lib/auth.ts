@@ -1,3 +1,4 @@
+// @ts-ignore
 import { clerkClient } from "@clerk/nextjs";
 import { getDb } from "./db/database";
 

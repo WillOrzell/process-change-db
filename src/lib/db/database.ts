@@ -1,3 +1,4 @@
+// @ts-ignore
 import BetterSqlite3 from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
@@ -65,7 +66,7 @@ export function getDb() {
 }
 
 // Close the database connection
-export function closeDb(db: BetterSqlite3.Database) {
+export function closeDb(db: any) {
   db.close();
 }
 

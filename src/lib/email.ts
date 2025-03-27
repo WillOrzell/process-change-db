@@ -1,3 +1,4 @@
+// @ts-ignore
 import nodemailer from 'nodemailer';
 import { ProcessChange } from './db/process-changes';
 import { getUserByClerkId } from './auth';
