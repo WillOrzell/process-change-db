@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ProcessChange, ProcessStatus, ProcessArea } from '../../lib/db/process-changes';
+import { getProcessChanges } from '@/lib/db/mock-data'; // Import the mock data function directly
 
 export default function DashboardPage() {
   const [changes, setChanges] = useState<ProcessChange[]>([]);
@@ -33,25 +34,12 @@ export default function DashboardPage() {
     'OTHER',
   ];
 
-  // Fetch process changes on component mount
+  // Load mock data directly
   useEffect(() => {
-    async function fetchChanges() {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/changes');
-        if (!response.ok) {
-          throw new Error('Failed to fetch changes');
-        }
-        const data = await response.json();
-        setChanges(data);
-      } catch (error) {
-        console.error('Error fetching changes:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchChanges();
+    // Get mock data directly instead of API call
+    const mockChanges = getProcessChanges();
+    setChanges(mockChanges);
+    setLoading(false);
   }, []);
 
   // Apply filters
