@@ -13,7 +13,7 @@ export default function UserSelector() {
   const [selectedUser, setSelectedUser] = useState('user_1');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Change user when selection changes
+  // Change user when selection changes - only run on client side
   useEffect(() => {
     async function changeUser() {
       setIsLoading(true);
@@ -26,6 +26,7 @@ export default function UserSelector() {
       }
     }
 
+    // Execute user change
     changeUser();
   }, [selectedUser]);
 

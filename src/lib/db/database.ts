@@ -1,74 +1,52 @@
-// @ts-ignore
-import BetterSqlite3 from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
+// Mock database implementation for development
 
-// Ensure the data directory exists
-const dataDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// DB file path
-const dbPath = path.join(dataDir, 'app_database.db');
-
-// Create and initialize the database
-export function initializeDatabase() {
-  const db = BetterSqlite3(dbPath);
+// Mock DB class with a dummy prepare method that returns chainable methods
+class MockDB {
+  // This is a simple mock object that pretends to be a database
+  // In real code, this would use better-sqlite3 or another SQLite library
   
-  // Create Users table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS Users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      clerkUserId TEXT NOT NULL UNIQUE,
-      role TEXT NOT NULL CHECK(role IN ('ENGINEER', 'SUPERVISOR', 'ADMIN')),
-      badgeNumber TEXT,
-      name TEXT,
-      email TEXT,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  // Mock the prepare method to return chainable methods
+  prepare(query: string) {
+    console.log('MOCK DB QUERY:', query);
+    
+    return {
+      run: (...params: any[]) => {
+        console.log('MOCK DB RUN with params:', params);
+        return { 
+          lastInsertRowid: Date.now(),
+          changes: 1 
+        };
+      },
+      get: (param?: any) => {
+        console.log('MOCK DB GET with param:', param);
+        return null;
+      },
+      all: (...params: any[]) => {
+        console.log('MOCK DB ALL with params:', params);
+        return [];
+      }
+    };
+  }
   
-  // Create ProcessChanges table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS ProcessChanges (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      status TEXT NOT NULL CHECK(status IN ('PROPOSED', 'OPEN', 'SUBMITTED', 'ACCEPTED', 'REJECTED')),
-      title TEXT NOT NULL,
-      processArea TEXT CHECK(processArea IN ('METALS', 'ETCH', 'PLATING', 'SAW', 'GRIND', 'PHOTO', 'DIFFUSION', 'OTHER')),
-      changeOwner INTEGER,
-      proposalDate TEXT,
-      targetDate TEXT,
-      acceptanceDate TEXT,
-      ageOfChange INTEGER,
-      reason TEXT,
-      changeOverview TEXT,
-      generalComments TEXT,
-      attachments TEXT,
-      specUpdated BOOLEAN DEFAULT 0,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(changeOwner) REFERENCES Users(id)
-    )
-  `);
-  
-  return db;
-}
-
-// Get a database connection
-export function getDb() {
-  try {
-    return BetterSqlite3(dbPath);
-  } catch (error) {
-    console.error('Failed to connect to database:', error);
-    throw error;
+  // Mock the close method
+  close() {
+    console.log('MOCK DB CLOSE');
   }
 }
 
-// Close the database connection
-export function closeDb(db: any) {
-  db.close();
+// Return a mock DB instance
+export function getDb() {
+  return new MockDB();
 }
 
-// Default export for easier imports
-export default getDb; 
+// Mock database initialization function
+export function initializeDatabase() {
+  console.log('MOCK DB INITIALIZED');
+  return true;
+}
+
+// Mock database closing function
+export function closeDb() {
+  console.log('MOCK DB CLOSED');
+  return true;
+} 

@@ -1,4 +1,4 @@
-import { ProcessChange, ProcessStatus, ProcessArea, ProcessChangeInput } from './process-changes';
+import { ProcessChange, ProcessStatus, ProcessArea, ProcessChangeInput } from './process-types';
 
 // Mock database for process changes
 let processChanges: ProcessChange[] = [

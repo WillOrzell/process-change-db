@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ProcessChange, ProcessArea, ProcessStatus } from '@/lib/db/process-changes';
+import { ProcessChange, ProcessArea, ProcessStatus } from '@/lib/db/process-types';
 import { parseAttachments, stringifyAttachments } from '@/lib/uploads';
 
 interface ProcessChangeFormProps {

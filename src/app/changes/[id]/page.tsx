@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ProcessChange } from '@/lib/db/process-changes';
+import { ProcessChange } from '@/lib/db/process-types';
 import ProcessChangeForm from '@/components/ProcessChangeForm';
 // Use our local auth instead of Clerk
 import { useAuth, hasRole } from '@/lib/local-auth';

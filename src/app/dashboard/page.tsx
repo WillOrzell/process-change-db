@@ -2,8 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ProcessChange, ProcessStatus, ProcessArea } from '../../lib/db/process-changes';
-import { getProcessChanges } from '@/lib/db/mock-data'; // Import the mock data function directly
+import { ProcessChange, ProcessStatus, ProcessArea } from '@/lib/db/process-types';
+import { getProcessChanges } from '@/lib/db/mock-data';
+
+// Sample data in case the import fails
+const fallbackData = [
+  {
+    id: 1,
+    status: 'PROPOSED' as ProcessStatus,
+    title: 'Sample Process Change',
+    processArea: 'ETCH' as ProcessArea,
+    changeOwner: 1,
+    proposalDate: new Date().toISOString(),
+    targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    ageOfChange: 0,
+    reason: 'Sample reason',
+    changeOverview: 'Sample overview',
+    generalComments: '',
+    attachments: '[]',
+    specUpdated: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
 export default function DashboardPage() {
   const [changes, setChanges] = useState<ProcessChange[]>([]);
@@ -34,12 +55,18 @@ export default function DashboardPage() {
     'OTHER',
   ];
 
-  // Load mock data directly
+  // Load data safely with fallback
   useEffect(() => {
-    // Get mock data directly instead of API call
-    const mockChanges = getProcessChanges();
-    setChanges(mockChanges);
-    setLoading(false);
+    try {
+      // Get mock data directly
+      const mockChanges = getProcessChanges();
+      setChanges(mockChanges);
+    } catch (error) {
+      console.error('Failed to load mock data, using fallback:', error);
+      setChanges(fallbackData);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   // Apply filters

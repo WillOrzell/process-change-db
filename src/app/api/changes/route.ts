@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ProcessChangeInput } from '@/lib/db/process-changes'; 
+import { ProcessChangeInput } from '@/lib/db/process-types'; 
 import { 
   getProcessChanges,
   createProcessChange

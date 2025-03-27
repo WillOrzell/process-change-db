@@ -4,7 +4,7 @@ import {
   updateProcessChange, 
   deleteProcessChange
 } from '@/lib/db/mock-data'; // Use mock data instead of SQLite
-import { ProcessStatus } from '@/lib/db/process-changes';
+import { ProcessStatus } from '@/lib/db/process-types';
 import { getCurrentUser, hasRole } from '@/lib/local-auth'; // Use local auth
 
 // GET handler to fetch a specific process change
